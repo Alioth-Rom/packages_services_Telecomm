@@ -47,6 +47,7 @@ import android.os.RemoteException;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.permission.PermissionManager;
 import android.provider.Settings;
@@ -107,6 +108,8 @@ public class InCallController extends CallsManagerListenerBase implements
     public void setAnomalyReporterAdapter(AnomalyReporterAdapter mAnomalyReporterAdapter){
         mAnomalyReporter = mAnomalyReporterAdapter;
     }
+    
+    private Vibrator mVibrator;
 
     public class InCallServiceConnection {
         /**
@@ -1525,10 +1528,10 @@ public class InCallController extends CallsManagerListenerBase implements
             Settings.System.VIBRATE_ON_DISCONNECT, 0, UserHandle.USER_CURRENT) == 1;
 
         if (oldState == CallState.DIALING && newState == CallState.ACTIVE && vibrateOnConnect) {
-            vibrate(100, 200, 0);
+            performHapticFeedback(VibrationEffect.get(VibrationEffect.EFFECT_CLICK));
         } else if (oldState == CallState.ACTIVE && newState == CallState.DISCONNECTED
                 && vibrateOnDisconnect) {
-            vibrate(100, 200, 0);
+            performHapticFeedback(VibrationEffect.get(VibrationEffect.EFFECT_DOUBLE_CLICK));
         }
         updateCall(call);
     }
@@ -1907,6 +1910,9 @@ public class InCallController extends CallsManagerListenerBase implements
         CarSwappingInCallServiceConnection inCallServiceConnection =
                 mInCallServiceConnections.get(userFromCall);
         inCallServiceConnection.chooseInitialInCallService(shouldUseCarModeUI());
+        if (mVibrator == null) {
+            mVibrator = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+        }
 
         // Actually try binding to the UI InCallService.
         if (inCallServiceConnection.connect(call) ==
@@ -2904,6 +2910,13 @@ public class InCallController extends CallsManagerListenerBase implements
                 return mCallsManager.getCurrentUserHandle();
             }
             return userFromCall;
+        
+        }
+    }
+
+    public void performHapticFeedback(VibrationEffect effect) {
+        if (mVibrator.hasVibrator() && mVibrator != null) {
+            mVibrator.vibrate(effect);
         }
     }
 }
